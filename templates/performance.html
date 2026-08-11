@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Model Performance - Smart City</title>
+    <!-- Bootstrap -->
+    <link href="/static/lib/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="/static/lib/css/bootstrap-icons.css" rel="stylesheet">
+    <!-- App Theme -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <style>
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(13, 110, 253, 0.15);
+            border-color: rgba(13, 110, 253, 0.3);
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .metric-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            height: 3px;
+            background: linear-gradient(90deg, #0d6efd, transparent);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-dark custom-navbar mb-4">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand navbar-title d-flex align-items-center gap-2">
+                <i class="bi bi-cpu text-primary"></i>
+                AI Performance Monitor
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house me-1"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        <!-- Accuracy Metrics Section -->
+        <h3 class="text-white section-title"><i class="bi bi-bullseye me-2 text-success"></i>Model Accuracy</h3>
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon text-info"><i class="bi bi-crosshair"></i></div>
+                    <div class="metric-value">87.7%</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon text-info"><i class="bi bi-arrow-repeat"></i></div>
+                    <div class="metric-value">86.3%</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon text-success"><i class="bi bi-bar-chart-fill"></i></div>
+                    <div class="metric-value">87.0%</div>
+                    <div class="metric-label">F1 Score</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon text-warning"><i class="bi bi-trophy-fill"></i></div>
+                    <div class="metric-value">90.1%</div>
+                    <div class="metric-label">mAP @0.5</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Performance Section -->
+        <h3 class="text-white section-title mt-4"><i class="bi bi-speedometer2 me-2 text-primary"></i>Real-time System Metrics</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-icon text-danger"><i class="bi bi-stopwatch"></i></div>
+                    <div class="metric-value" id="val-latency">-- ms</div>
+                    <div class="metric-label">End-to-End Latency</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-icon text-primary"><i class="bi bi-display"></i></div>
+                    <div class="metric-value" id="val-fps">--</div>
+                    <div class="metric-label">Frames Per Second (FPS)</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-icon text-warning"><i class="bi bi-lightning-charge"></i></div>
+                    <div class="metric-value" id="val-inference">-- ms</div>
+                    <div class="metric-label">Inference Time</div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mt-4">
+                <div class="metric-card border-primary">
+                    <div class="metric-icon text-light"><i class="bi bi-cpu-fill"></i></div>
+                    <div class="metric-value text-primary" id="val-cpu">-- %</div>
+                    <div class="metric-label">CPU Usage</div>
+                    <div class="progress mt-3 bg-dark" style="height: 5px;">
+                        <div id="bar-cpu" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mt-4">
+                <div class="metric-card border-success">
+                    <div class="metric-icon text-light"><i class="bi bi-memory"></i></div>
+                    <div class="metric-value text-success" id="val-memory">-- %</div>
+                    <div class="metric-label">Memory Usage</div>
+                    <div class="progress mt-3 bg-dark" style="height: 5px;">
+                        <div id="bar-memory" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function fetchPerformance() {
+            fetch('/api/performance')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('val-latency').innerText = data.latency + ' ms';
+                    document.getElementById('val-fps').innerText = data.fps;
+                    document.getElementById('val-inference').innerText = data.inference_time + ' ms';
+                    
+                    document.getElementById('val-cpu').innerText = data.cpu_usage + ' %';
+                    document.getElementById('bar-cpu').style.width = data.cpu_usage + '%';
+                    
+                    document.getElementById('val-memory').innerText = data.memory_usage + ' %';
+                    document.getElementById('bar-memory').style.width = data.memory_usage + '%';
+                })
+                .catch(err => console.error("Error fetching performance metrics:", err));
+        }
+
+        // Fetch on load
+        fetchPerformance();
+        
+        // Refresh every 2 seconds
+        setInterval(fetchPerformance, 2000);
+    </script>
+</body>
+</html>

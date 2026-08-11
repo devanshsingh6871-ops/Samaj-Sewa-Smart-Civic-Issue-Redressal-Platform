@@ -195,13 +195,44 @@ function send(formData) {
             // Highlight: Store report ID for feedback
             currentReportId = data.report_id;
 
+            // Render scoring details if available
+            const scoringDetails = document.getElementById("scoringDetails");
+            if (scoringDetails && data.scoring) {
+                scoringDetails.innerHTML = `
+                    <div class="mb-1 text-light"><strong>Severity Score:</strong> ${data.scoring.combined_score}/100</div>
+                    <div class="d-flex justify-content-between"><span>Objects:</span> <span class="text-light">${data.scoring.objects}</span></div>
+                    <div class="d-flex justify-content-between"><span>Confidence:</span> <span class="text-light">${data.scoring.confidence}%</span></div>
+                    <div class="d-flex justify-content-between"><span>Area Covered:</span> <span class="text-light">${data.scoring.area_covered}%</span></div>
+                    <div class="d-flex justify-content-between"><span>Object Size:</span> <span class="text-light">${data.scoring.object_size}%</span></div>
+                    <div class="d-flex justify-content-between"><span>Distance Score:</span> <span class="text-light">${data.scoring.distance}%</span></div>
+                `;
+                scoringDetails.classList.remove("d-none");
+            } else if (scoringDetails) {
+                scoringDetails.classList.add("d-none");
+            }
+
+            // Update Explainable AI Box
+            const explainabilityBox = document.getElementById("explainabilityBox");
+            if (explainabilityBox && data.explainability) {
+                document.getElementById("expDetected").innerText = data.explainability.detected;
+                document.getElementById("expConfidence").innerText = data.explainability.confidence;
+                document.getElementById("expReason").innerText = data.explainability.reason;
+                document.getElementById("expDepartment").innerText = data.explainability.recommended_department;
+                document.getElementById("expPriority").innerText = data.explainability.priority;
+                document.getElementById("expTime").innerText = data.explainability.estimated_cleanup_time;
+                explainabilityBox.classList.remove("d-none");
+            } else if (explainabilityBox) {
+                explainabilityBox.classList.add("d-none");
+            }
+
             // Reset confirmation box
             resetConfirmationBox();
 
             /* Show user confirmation UI */
             confirmationBox.classList.remove("d-none");
         })
-        .catch(() => {
+        .catch((err) => {
+            console.error(err);
             loadingDiv.classList.add("d-none");
             alert("Prediction failed");
         });
@@ -228,7 +259,10 @@ function formatSummary(summary) {
 function updateSeverity(level) {
     severityBadge.className = "severity";
     severityBadge.innerText = "Severity: " + level;
-    severityBadge.classList.add(level.toLowerCase());
+    
+    // Extract base level (e.g., "high" from "HIGH (SCORE: 85/100)")
+    let baseLevel = level.split(" ")[0].toLowerCase();
+    severityBadge.classList.add(baseLevel);
     severityBadge.classList.remove("d-none");
 }
 
