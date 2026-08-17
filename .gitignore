@@ -18,8 +18,9 @@ Report.md
 data/
 runs/
 
-# Generated reports (images)
+# Generated reports (images) & runtime logs
 static/reports/
+logs/*.log
 
 # OS / Editor
 .vscode/

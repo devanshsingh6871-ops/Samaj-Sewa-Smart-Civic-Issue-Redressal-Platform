@@ -25,6 +25,9 @@ import cv2
 import numpy as np
 import logging
 import psutil
+import uuid
+import random
+import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -141,6 +144,33 @@ def init_db():
     if 'class_confidences' not in columns:
         print("⚠️ Migrating database: Adding 'class_confidences' column...")
         cur.execute("ALTER TABLE reports ADD COLUMN class_confidences TEXT DEFAULT NULL")
+
+    # Samaj Sewa Citizen Complaints Table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id TEXT UNIQUE NOT NULL,
+            user_id TEXT NOT NULL,
+            contact_name TEXT,
+            contact_phone TEXT,
+            contact_email TEXT,
+            category TEXT,
+            description TEXT NOT NULL,
+            image_path TEXT,
+            video_path TEXT,
+            latitude REAL,
+            longitude REAL,
+            landmark TEXT,
+            created_at TEXT NOT NULL,
+            ai_detected_category TEXT,
+            ai_summary TEXT,
+            ai_severity TEXT,
+            ai_confidence REAL,
+            department TEXT,
+            status TEXT DEFAULT 'Submitted',
+            admin_notes TEXT DEFAULT NULL
+        )
+    """)
 
     conn.commit()
     conn.close()
@@ -706,8 +736,6 @@ def history():
     """)
     rows = cur.fetchall()
 
-    conn.close()
-
     reports = []
     heatmap_points = []
 
@@ -757,16 +785,48 @@ def history():
             weight = 0.5 if severity == "Low" else 1.0 if severity == "Medium" else 2.0
             heatmap_points.append([float(latitude), float(longitude), weight])
 
+    # Also fetch citizen complaints
+    cur.execute("""
+        SELECT complaint_id, user_id, contact_name, contact_phone, category, description, image_path, latitude, longitude, created_at, ai_detected_category, ai_severity, department, status, admin_notes
+        FROM complaints
+        ORDER BY id DESC
+    """)
+    c_rows = cur.fetchall()
+    
+    conn.close()
+    
+    citizen_complaints = []
+    for cr in c_rows:
+        citizen_complaints.append({
+            "complaint_id": cr[0],
+            "user_id": cr[1],
+            "contact_name": cr[2],
+            "contact_phone": cr[3],
+            "category": cr[4],
+            "description": cr[5],
+            "image_path": cr[6],
+            "latitude": cr[7],
+            "longitude": cr[8],
+            "created_at": cr[9],
+            "ai_detected": cr[10],
+            "ai_severity": cr[11],
+            "department": cr[12],
+            "status": cr[13],
+            "admin_notes": cr[14]
+        })
+
     summary_stats = {
         "total_reports": total_reports,
         "total_garbage": total_garbage,
         "total_pothole": total_pothole,
-        "no_issue_reports": no_issue_reports
+        "no_issue_reports": no_issue_reports,
+        "total_citizen_complaints": len(citizen_complaints)
     }
 
     return render_template(
         "history.html",
         reports=reports,
+        citizen_complaints=citizen_complaints,
         stats=summary_stats,
         heatmap_points=heatmap_points
     )
@@ -859,14 +919,408 @@ def fix_departments():
     return jsonify({"status": "success", "updated_count": count})
 
 # =====================================================
+# SAMAJ SEWA - CITIZEN PORTAL ROUTES & APIS
+# =====================================================
+
+@app.route("/citizen")
+@app.route("/user")
+def citizen_portal():
+    """
+    Render Samaj Sewa Citizen Civic Issue Portal.
+    """
+    return render_template("citizen.html")
+
+
+@app.route("/api/citizen/analyze", methods=["POST"])
+def api_citizen_analyze():
+    """
+    Instant AI analysis endpoint for image preview.
+    Reuses the custom YOLOv8 model inference pipeline.
+    """
+    file = request.files.get("image")
+    if not file:
+        return jsonify({"error": "No image file provided for analysis"}), 400
+
+    try:
+        image = Image.open(file.stream).convert("RGB")
+        img_base64, summary, avg_conf, scoring, class_confidences, latency_ms = run_inference(image)
+
+        # Determine department based on detected items
+        department = "Civic Operations"
+        has_pothole = any("pothole" in k.lower() for k in summary.keys())
+        has_garbage = any("garbage" in k.lower() for k in summary.keys())
+
+        if has_pothole and has_garbage:
+            department = "Roads & Sanitation Joint Task Force"
+            detected_label = f"Potholes ({summary.get('pothole', 0)}) & Garbage Dumps ({summary.get('garbage', 0)})"
+            category = "Road & Sanitation Hazard"
+        elif has_pothole:
+            department = "Roads Department"
+            detected_label = f"Pothole Detected ({summary.get('pothole', 0)} spot{'s' if summary.get('pothole', 0) > 1 else ''})"
+            category = "Road Infrastructure Damage"
+        elif has_garbage:
+            department = "Department of Environment"
+            detected_label = f"Garbage Waste Detected ({summary.get('garbage', 0)} pile{'s' if summary.get('garbage', 0) > 1 else ''})"
+            category = "Sanitation & Waste Accumulation"
+        else:
+            department = "Municipal Grievance Cell"
+            detected_label = "No severe road/garbage hazard detected"
+            category = "General Civic Problem"
+
+        combined_score = scoring.get("combined_score", 0)
+        if combined_score < 40:
+            severity_level = f"Low (Score: {combined_score}/100)"
+        elif combined_score < 70:
+            severity_level = f"Medium (Score: {combined_score}/100)"
+        else:
+            severity_level = f"High (Score: {combined_score}/100)"
+
+        confidence_pct = round(avg_conf * 100, 1) if avg_conf > 0 else 0
+
+        return jsonify({
+            "status": "success",
+            "detected": detected_label,
+            "category": category,
+            "summary": summary,
+            "severity": severity_level,
+            "confidence": confidence_pct,
+            "department": department,
+            "annotated_image": img_base64,
+            "latency_ms": int(latency_ms)
+        })
+    except Exception as e:
+        error_logger.error(f"Citizen AI analysis error: {e}")
+        return jsonify({"error": "Failed to analyze image", "details": str(e)}), 500
+
+
+@app.route("/api/citizen/report", methods=["POST"])
+def api_citizen_report():
+    """
+    Submit and register a new citizen complaint.
+    Extracts citizen metadata, handles media, performs AI diagnostic,
+    stores record in SQLite database, and returns unique tracking ID.
+    """
+    user_id = request.form.get("user_id", "").strip() or f"CITIZEN-{random.randint(1000, 9999)}"
+    contact_name = request.form.get("contact_name", "").strip() or "Citizen"
+    contact_phone = request.form.get("contact_phone", "").strip() or "N/A"
+    contact_email = request.form.get("contact_email", "").strip() or None
+    category = request.form.get("category", "Other Civic Infrastructure Problem").strip()
+    description = request.form.get("description", "").strip()
+    landmark = request.form.get("landmark", "").strip() or None
+
+    if not description:
+        return jsonify({"status": "error", "error": "Problem description is required."}), 400
+
+    # Parse coordinates
+    lat_raw = request.form.get("latitude")
+    lng_raw = request.form.get("longitude")
+    try:
+        latitude = float(lat_raw) if lat_raw else None
+        longitude = float(lng_raw) if lng_raw else None
+    except ValueError:
+        latitude = longitude = None
+
+    # Generate tracking ID and timestamp
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    date_code = datetime.now().strftime("%Y%m%d")
+    random_code = secrets.token_hex(2).upper()
+    complaint_id = f"SS-{date_code}-{random_code}"
+    created_at = datetime.now().isoformat()
+
+    image_path = None
+    video_path = None
+    ai_summary = {}
+    ai_detected = "Pending Assessment"
+    ai_severity = "Low"
+    ai_confidence = 0.0
+    department = "Municipal Operations"
+
+    reports_dir = BASE_DIR / "static" / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check for Image Upload
+    image_file = request.files.get("image")
+    video_file = request.files.get("video")
+
+    if image_file and image_file.filename:
+        try:
+            image = Image.open(image_file.stream).convert("RGB")
+            img_base64, summary, avg_conf, scoring, class_confidences, latency_ms = run_inference(image)
+            
+            # Save original / annotated image
+            filename = f"citizen_{complaint_id}_{timestamp_str}.png"
+            full_path = reports_dir / filename
+            image.save(full_path)
+            image_path = f"static/reports/{filename}"
+
+            ai_summary = summary
+            ai_confidence = round(avg_conf * 100, 1)
+
+            has_pothole = any("pothole" in k.lower() for k in summary.keys())
+            has_garbage = any("garbage" in k.lower() for k in summary.keys())
+
+            if has_pothole and has_garbage:
+                department = "Roads & Sanitation Joint Task Force"
+                ai_detected = f"Potholes ({summary.get('pothole', 0)}) & Garbage Dumps ({summary.get('garbage', 0)})"
+            elif has_pothole:
+                department = "Roads Department"
+                ai_detected = f"Pothole Detected ({summary.get('pothole', 0)} spot{'s' if summary.get('pothole', 0) > 1 else ''})"
+            elif has_garbage:
+                department = "Department of Environment"
+                ai_detected = f"Garbage Waste Detected ({summary.get('garbage', 0)} pile{'s' if summary.get('garbage', 0) > 1 else ''})"
+            else:
+                department = "Roads Department" if "road" in category.lower() or "pothole" in category.lower() else "Department of Environment" if "garbage" in category.lower() else "Civic Grievance Cell"
+                ai_detected = "No hazardous object detected in photo (Manual Verification Queued)"
+
+            combined_score = scoring.get("combined_score", 0)
+            if combined_score < 40:
+                ai_severity = f"Low (Score: {combined_score}/100)"
+            elif combined_score < 70:
+                ai_severity = f"Medium (Score: {combined_score}/100)"
+            else:
+                ai_severity = f"High (Score: {combined_score}/100)"
+
+        except Exception as e:
+            error_logger.error(f"Error processing citizen image: {e}")
+            ai_detected = "Analysis unavailable (Image parsing issue)"
+            ai_severity = "Review Pending"
+
+    elif video_file and video_file.filename:
+        try:
+            temp_dir = BASE_DIR / "static" / "temp"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            temp_path = temp_dir / f"citizen_video_{complaint_id}_{timestamp_str}.mp4"
+            video_file.save(temp_path)
+
+            summary, key_frames, avg_conf = process_video_frames(temp_path)
+            if temp_path.exists():
+                os.remove(temp_path)
+
+            ai_summary = summary
+            ai_confidence = round(avg_conf * 100, 1)
+
+            if key_frames:
+                image_path = key_frames[0]
+                ai_detected = f"Video Keyframe Detections: {json.dumps(summary)}"
+            else:
+                ai_detected = "Video Stream Analysis Completed (No distinct hazards)"
+
+            total_issues = sum(summary.values())
+            if total_issues <= 2:
+                ai_severity = "Low"
+            elif total_issues <= 6:
+                ai_severity = "Medium"
+            else:
+                ai_severity = "High"
+
+            department = "Roads Department" if "road" in category.lower() or "pothole" in category.lower() else "Department of Environment" if "garbage" in category.lower() else "Civic Grievance Cell"
+        except Exception as e:
+            error_logger.error(f"Error processing citizen video: {e}")
+            ai_detected = "Video analysis unavailable"
+            ai_severity = "Review Pending"
+    else:
+        # Fallback when no media is provided
+        ai_detected = "Media evidence not attached"
+        ai_severity = "Manual Review Required"
+        department = "Roads Department" if "road" in category.lower() or "pothole" in category.lower() else "Department of Environment" if "garbage" in category.lower() else "Civic Grievance Cell"
+
+    # Save into SQLite database
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO complaints
+        (complaint_id, user_id, contact_name, contact_phone, contact_email, category, description, image_path, video_path, latitude, longitude, landmark, created_at, ai_detected_category, ai_summary, ai_severity, ai_confidence, department, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        complaint_id,
+        user_id,
+        contact_name,
+        contact_phone,
+        contact_email,
+        category,
+        description,
+        image_path,
+        video_path,
+        latitude,
+        longitude,
+        landmark,
+        created_at,
+        ai_detected,
+        json.dumps(ai_summary),
+        ai_severity,
+        ai_confidence,
+        department,
+        "Submitted"
+    ))
+
+    # Also record into reports table if image is available, ensuring admin dashboard sync
+    if image_path:
+        cur.execute("""
+            INSERT INTO reports
+            (image_path, summary, severity, latitude, longitude, created_at, type, department, avg_confidence, latency_ms, class_confidences)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            image_path,
+            json.dumps(ai_summary),
+            ai_severity,
+            latitude,
+            longitude,
+            created_at,
+            'citizen_complaint',
+            department,
+            ai_confidence / 100.0 if ai_confidence else None,
+            120,
+            json.dumps({})
+        ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "success",
+        "complaint_id": complaint_id,
+        "created_at": created_at,
+        "department": department,
+        "complaint_status": "Submitted",
+        "ai_results": {
+            "detected": ai_detected,
+            "category": category,
+            "severity": ai_severity,
+            "confidence": ai_confidence
+        },
+        "message": "Complaint successfully registered on Samaj Sewa platform."
+    })
+
+
+@app.route("/api/citizen/track/<query>", methods=["GET"])
+def api_citizen_track(query):
+    """
+    Search and track complaint by complaint_id or user_id.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT complaint_id, user_id, contact_name, contact_phone, contact_email, category, description,
+               image_path, video_path, latitude, longitude, landmark, created_at,
+               ai_detected_category, ai_summary, ai_severity, ai_confidence, department, status, admin_notes
+        FROM complaints
+        WHERE complaint_id = ? OR user_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (query, query))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({"status": "error", "message": "Complaint not found"}), 404
+
+    complaint = {
+        "complaint_id": row[0],
+        "user_id": row[1],
+        "contact_name": row[2],
+        "contact_phone": row[3],
+        "contact_email": row[4],
+        "category": row[5],
+        "description": row[6],
+        "image_path": row[7],
+        "video_path": row[8],
+        "latitude": row[9],
+        "longitude": row[10],
+        "landmark": row[11],
+        "created_at": row[12],
+        "ai_detected_category": row[13],
+        "ai_summary": json.loads(row[14]) if row[14] else {},
+        "ai_severity": row[15],
+        "ai_confidence": row[16],
+        "department": row[17],
+        "status": row[18],
+        "admin_notes": row[19]
+    }
+
+    return jsonify({"status": "success", "complaint": complaint})
+
+
+@app.route("/api/citizen/complaints", methods=["GET"])
+def api_citizen_list_complaints():
+    """
+    List complaints for community transparency feed or citizen dashboard.
+    """
+    user_id = request.args.get("user_id")
+    limit = int(request.args.get("limit", 20))
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    if user_id:
+        cur.execute("""
+            SELECT complaint_id, user_id, contact_name, category, description, image_path, latitude, longitude, created_at, ai_detected_category, ai_severity, department, status
+            FROM complaints
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+        """, (user_id, limit))
+    else:
+        cur.execute("""
+            SELECT complaint_id, user_id, contact_name, category, description, image_path, latitude, longitude, created_at, ai_detected_category, ai_severity, department, status
+            FROM complaints
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    complaints = []
+    for r in rows:
+        complaints.append({
+            "complaint_id": r[0],
+            "user_id": r[1],
+            "contact_name": r[2],
+            "category": r[3],
+            "description": r[4],
+            "image_path": r[5],
+            "latitude": r[6],
+            "longitude": r[7],
+            "created_at": r[8],
+            "ai_detected_category": r[9],
+            "ai_severity": r[10],
+            "department": r[11],
+            "status": r[12]
+        })
+
+    return jsonify({"status": "success", "complaints": complaints})
+
+
+@app.route("/api/citizen/update-status", methods=["POST"])
+def api_citizen_update_status():
+    """
+    Admin endpoint to update status and notes for a citizen complaint.
+    """
+    data = request.get_json() or {}
+    complaint_id = data.get("complaint_id")
+    new_status = data.get("status")
+    admin_notes = data.get("admin_notes", "")
+
+    if not complaint_id or not new_status:
+        return jsonify({"error": "Missing complaint_id or status"}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE complaints
+        SET status = ?, admin_notes = ?
+        WHERE complaint_id = ?
+    """, (new_status, admin_notes, complaint_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "success", "message": f"Complaint {complaint_id} updated to {new_status}"})
+
+# =====================================================
 # APPLICATION ENTRY POINT
 # =====================================================
 
 if __name__ == "__main__":
-    app.run(
-        host="127.0.0.1",   # explicit localhost
-        port=8000,          # avoids blocked port 5000
-        debug=True
-    )
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)

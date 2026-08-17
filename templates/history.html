@@ -49,9 +49,14 @@
             <span class="navbar-brand navbar-title">
                 Smart City - Report History
             </span>
-            <a href="/" class="btn btn-outline-light btn-sm">
-                &larr; Back
-            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/citizen" class="btn btn-outline-warning btn-sm fw-semibold">
+                    <i class="bi bi-people-fill me-1"></i> Citizen Portal (Samaj Sewa)
+                </a>
+                <a href="/" class="btn btn-outline-light btn-sm">
+                    &larr; Back to Command Center
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -263,6 +268,97 @@
         {% endif %}
     </div>
 
+    <!-- =====================================================
+         SAMAJ SEWA CITIZEN COMPLAINTS SECTION
+    ====================================================== -->
+    <div class="history-section mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h4 class="fw-semibold text-light mb-1">
+                    <i class="bi bi-people-fill text-warning me-2"></i>Samaj Sewa - Citizen Grievance Registry
+                </h4>
+                <div class="text-muted small">Public complaints logged via citizen portal with AI triage & status management</div>
+            </div>
+            <a href="/citizen" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-plus-circle me-1"></i> Open Citizen Portal
+            </a>
+        </div>
+
+        {% if citizen_complaints %}
+        <div class="table-responsive">
+            <table class="table custom-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Tracking ID</th>
+                        <th>Evidence</th>
+                        <th>Citizen ID / Contact</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Department</th>
+                        <th>AI Severity</th>
+                        <th>Status</th>
+                        <th>Logged At</th>
+                        <th class="text-end">Update Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in citizen_complaints %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary border border-primary font-monospace">{{ c.complaint_id }}</span>
+                        </td>
+                        <td>
+                            {% if c.image_path %}
+                            <img src="/{{ c.image_path }}" class="img-thumbnail-custom" onclick="showImageModal('/{{ c.image_path }}')" alt="Evidence">
+                            {% else %}
+                            <span class="text-muted small">No Media</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-white">{{ c.user_id }}</div>
+                            <small class="text-muted">{{ c.contact_name }} ({{ c.contact_phone }})</small>
+                        </td>
+                        <td>
+                            <span class="small text-info">{{ c.category }}</span>
+                        </td>
+                        <td style="max-width: 200px;">
+                            <div class="text-truncate text-white-50 small" title="{{ c.description }}">{{ c.description }}</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill bg-secondary">{{ c.department }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if 'high' in (c.ai_severity|lower) %}bg-danger{% elif 'medium' in (c.ai_severity|lower) %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ c.ai_severity }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if c.status == 'Resolved' %}bg-success{% elif c.status == 'In Progress' %}bg-info text-dark{% elif c.status == 'Under Review' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ c.status }}
+                            </span>
+                        </td>
+                        <td class="text-nowrap small text-muted">{{ c.created_at }}</td>
+                        <td class="text-end">
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto; display: inline-block;" onchange="updateComplaintStatus('{{ c.complaint_id }}', this.value)">
+                                <option value="Submitted" {% if c.status == 'Submitted' %}selected{% endif %}>Submitted</option>
+                                <option value="Under Review" {% if c.status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                                <option value="In Progress" {% if c.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                <option value="Resolved" {% if c.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center p-4">
+            <i class="bi bi-inbox fs-2 text-muted opacity-25"></i>
+            <p class="text-muted mt-2 small">No citizen complaints logged yet. Submit one from the Citizen Portal!</p>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Image Preview Modal -->
     <div class="modal fade" id="imageModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -439,6 +535,25 @@
             if (dateFromIn) dateFromIn.addEventListener('change', filterTable);
             if (dateToIn) dateToIn.addEventListener('change', filterTable);
         });
+
+        async function updateComplaintStatus(complaintId, status) {
+            try {
+                const res = await fetch('/api/citizen/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ complaint_id: complaintId, status: status })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Complaint ${complaintId} status updated to: ${status}`);
+                    window.location.reload();
+                } else {
+                    alert('Status update failed: ' + (data.error || 'Server error'));
+                }
+            } catch (err) {
+                alert('Network error updating status.');
+            }
+        }
     </script>
 
     <!-- =====================================================
