@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Smart City Command Center</title>
+
+    <!-- ===============================
+         CORE STYLES
+    ================================ -->
+
+    <!-- Bootstrap -->
+    <!-- Bootstrap -->
+    <link href="/static/lib/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="/static/lib/css/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- App Theme -->
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+</head>
+
+<body>
+
+    <!-- =====================================================
+     NAVBAR
+===================================================== -->
+    <nav class="navbar navbar-dark custom-navbar">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand navbar-title d-flex align-items-center gap-2">
+                <i class="bi bi-shield-check text-primary"></i>
+                Smart City Command Center
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
+                    <i class="bi bi-circle-fill small me-1"></i> System Online
+                </span>
+                <a href="/citizen" class="btn btn-outline-warning btn-sm fw-semibold">
+                    <i class="bi bi-people-fill me-1"></i> Samaj Sewa (Citizen Portal)
+                </a>
+                <a href="/performance" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-speedometer2 me-1"></i> Performance
+                </a>
+                <a href="/history" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-clock-history me-1"></i> History
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- =====================================================
+     MAIN DASHBOARD CONTENT
+===================================================== -->
+    <div class="container-fluid p-4 dashboard-container">
+        <div class="row g-4">
+
+            <!-- LEFT COLUMN: INPUT PANEL -->
+            <div class="col-lg-4">
+                <div class="glass-panel h-100 p-4">
+                    <h5 class="panel-title mb-4"><i class="bi bi-input-cursor-text me-2"></i>Data Ingestion</h5>
+
+                    <!-- Input Tabs -->
+                    <ul class="nav nav-pills mb-4 nav-fill custom-pills" id="inputTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="image-tab" data-bs-toggle="pill"
+                                data-bs-target="#image-pane" type="button">
+                                <i class="bi bi-image me-1"></i> Image
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="video-tab" data-bs-toggle="pill" data-bs-target="#video-pane"
+                                type="button">
+                                <i class="bi bi-camera-video me-1"></i> Video
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="inputTabsContent">
+
+                        <!-- IMAGE INPUT TAB -->
+                        <div class="tab-pane fade show active" id="image-pane">
+                            <div class="upload-area p-4 text-center mb-3" id="dropZone">
+                                <i class="bi bi-cloud-upload fs-1 text-secondary mb-2"></i>
+                                <p class="text-white-50 mb-3">Drag & Drop or Click to Upload</p>
+
+                                <input type="file" id="imageInput" accept="image/*" class="d-none">
+                                <button class="btn btn-primary w-100 mb-2 glow-primary" id="uploadBtn">
+                                    Select Image
+                                </button>
+                                <button class="btn btn-outline-info w-100 glow-secondary" id="cameraBtn">
+                                    <i class="bi bi-camera me-1"></i> Live Camera
+                                </button>
+                            </div>
+
+                            <h5 class="panel-title mb-3 mt-4 border-top border-secondary pt-4"><i class="bi bi-activity me-2"></i>Live Stream / Result</h5>
+
+                            <!-- Result View -->
+                            <div id="output" class="d-none">
+                                <img id="outputImage" class="img-fluid rounded border border-secondary mb-3 w-100" alt="Result">
+
+                                <div class="bg-dark p-3 rounded mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="text-white-50 mb-0">Detection Log</h6>
+                                        <span id="departmentBadge" class="badge bg-secondary">Unassigned</span>
+                                    </div>
+                                    <span id="severityBadge" class="d-none"></span>
+                                    <p id="summaryText" class="text-light fw-mono mb-0 small mt-2"></p>
+                                    <div id="scoringDetails" class="d-none mt-3 small text-white-50 border-top border-secondary border-opacity-50 pt-2"></div>
+                                </div>
+
+                                <!-- Explainable AI -->
+                                <div id="explainabilityBox" class="bg-dark p-3 rounded mb-3 d-none border border-info border-opacity-50">
+                                    <h6 class="text-info mb-3"><i class="bi bi-robot me-2"></i>AI Reasoning</h6>
+                                    <div class="row g-2 small">
+                                        <div class="col-6">
+                                            <div class="text-white-50">Detected</div>
+                                            <div class="text-light fw-bold" id="expDetected">-</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-white-50">Confidence</div>
+                                            <div class="text-light fw-bold" id="expConfidence">-</div>
+                                        </div>
+                                        <div class="col-12 mt-2">
+                                            <div class="text-white-50">Reason</div>
+                                            <div class="text-light fw-bold" id="expReason">-</div>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <div class="text-white-50">Recommended Dept</div>
+                                            <div class="text-light fw-bold" id="expDepartment">-</div>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <div class="text-white-50">Priority</div>
+                                            <div class="text-light fw-bold" id="expPriority">-</div>
+                                        </div>
+                                        <div class="col-12 mt-2">
+                                            <div class="text-white-50">Estimated Cleanup Time</div>
+                                            <div class="text-light fw-bold" id="expTime">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Feedback -->
+                                <div id="confirmationBox" class="d-none">
+                                    <p class="text-white-50 small mb-2">Confirm Accuracy:</p>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-succes btn-sm flex-grow-1" id="confirmYes">✔ Valid</button>
+                                        <button class="btn btn-outline-danger btn-sm flex-grow-1" id="confirmNo">✖
+                                            Incorrect</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placeholder when empty -->
+                            <div id="outputPlaceholder" class="text-center text-white-50 mt-4 mb-2">
+                                <i class="bi bi-terminal fs-1 opacity-25"></i>
+                                <p class="mt-2">Waiting for input stream...</p>
+                            </div>
+
+                        </div>
+
+                        <!-- VIDEO INPUT TAB -->
+                        <div class="tab-pane fade" id="video-pane">
+                            <div class="upload-area p-4 text-center mb-3">
+                                <i class="bi bi-film fs-1 text-secondary mb-2"></i>
+                                <p class="text-white-50 mb-3">Upload Video for Analysis</p>
+
+                                <form action="/predict-video" method="post" enctype="multipart/form-data"
+                                    id="videoForm">
+                                    <input type="file" name="video" id="videoInput" accept="video/*" class="d-none"
+                                        onchange="document.getElementById('videoForm').submit()">
+                                    <button class="btn btn-warning w-100 glow-warning" type="button"
+                                        onclick="document.getElementById('videoInput').click()">
+                                        Select Video File
+                                    </button>
+                                </form>
+                                <small class="text-white-50 d-block mt-2">Supports MP4, AVI, MOV</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CAMERA VIEW (Hidden initially) -->
+                    <div id="cameraContainer" class="d-none mt-3 p-2 bg-black rounded">
+                        <video id="camera" class="w-100 rounded"></video>
+                        <div class="d-flex justify-content-center gap-2 mt-2">
+                            <button class="btn btn-success btn-sm" id="captureBtn">Capture</button>
+                            <button class="btn btn-danger btn-sm" id="closeCameraBtn">Close</button>
+                        </div>
+                    </div>
+                    <canvas id="captureCanvas" class="d-none"></canvas>
+
+                </div>
+            </div>
+
+            <!-- CENTER COLUMN: ALERT & STATS -->
+            <div class="col-lg-8 mb-4">
+                <div class="glass-panel h-100 p-4">
+                    <div class="panel-header d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cpu me-2 text-primary"></i>System Status
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Department Filter">
+                            <button type="button" class="btn btn-outline-secondary active"
+                                onclick="filterDepartment('all')">All</button>
+                            <button type="button" class="btn btn-outline-warning glow-warning"
+                                onclick="filterDepartment('roads')">Roads</button>
+                            <button type="button" class="btn btn-outline-danger glow-danger"
+                                onclick="filterDepartment('sanitation')">Sanitation</button>
+                        </div>
+                    </div>
+
+                    <!-- LIVE STATS ROW -->
+                    <div class="row g-3 mb-4">
+                        <a href="/history" class="col-md-6 text-decoration-none">
+                            <div class="stat-card p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div id="val-total" class="stat-value text-primary count"
+                                            data-target="{{ stats.total_reports }}">0</div>
+                                        <div class="stat-label">Total Reports</div>
+                                    </div>
+                                    <i class="bi bi-database fs-3 text-primary opacity-50"></i>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="col-md-6" id="card-potholes">
+                            <div class="stat-card p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div id="val-potholes" class="stat-value text-warning count"
+                                            data-target="{{ stats.total_potholes }}">0</div>
+                                        <div class="stat-label">Active Potholes</div>
+                                    </div>
+                                    <i class="bi bi-cone-striped fs-3 text-warning opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="card-garbage">
+                            <div class="stat-card p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div id="val-garbage" class="stat-value text-danger count"
+                                            data-target="{{ stats.total_garbage }}">0</div>
+                                        <div class="stat-label">Garbage Alerts</div>
+                                    </div>
+                                    <i class="bi bi-trash fs-3 text-danger opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="stat-value text-info d-flex align-items-baseline gap-2">
+                                            <span>{{ stats.static_accuracy }}%</span>
+                                            <span class="fs-5 text-white-50">/ {{ stats.model_accuracy }}%</span>
+                                        </div>
+                                        <div class="stat-label">Model / Live Acc</div>
+                                    </div>
+                                    <i class="bi bi-graph-up-arrow fs-3 text-info opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI MODEL HEALTH SECTION -->
+                    <div class="mb-4">
+                        <h6 class="text-white-50 mb-3"><i class="bi bi-robot me-2"></i>AI Model Health</h6>
+                        <div class="bg-dark bg-opacity-50 p-3 rounded border border-secondary border-opacity-25">
+                            <div class="row g-3 small">
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">Model Version</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-box-seam me-1 text-primary"></i>{{ stats.model_version }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">Avg Confidence</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-bullseye me-1 text-info"></i>{{ stats.avg_confidence }}%</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">Avg Latency</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-stopwatch me-1 text-warning"></i>{{ stats.avg_inference }} ms</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">Images Processed</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-images me-1 text-secondary"></i><span class="count" data-target="{{ stats.total_reports }}">0</span></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">Detection Acc</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-check2-circle me-1 text-success"></i>{{ stats.model_accuracy }}%</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-white-50 mb-1">False Positive</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-exclamation-triangle me-1 text-danger"></i>{{ stats.false_positive_rate }}%</div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="text-white-50 mb-1">System Uptime</div>
+                                    <div class="text-light fw-bold"><i class="bi bi-activity me-1 text-success"></i>{{ stats.system_uptime }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTIONS -->
+                    <div class="mt-auto">
+                        <a href="/export-csv" class="btn btn-outline-light w-100 mb-2">
+                            <i class="bi bi-file-earmark-spreadsheet me-2"></i> Export Data (CSV)
+                        </a>
+                        <button class="btn btn-outline-secondary w-100" id="projectInfoBtn">
+                            <i class="bi bi-info-circle me-2"></i> System Info
+                        </button>
+                    </div>
+
+                    <!-- LOADING SPINNER -->
+                    <div id="loading"
+                        class="d-none position-absolute top-50 start-50 translate-middle text-center bg-black bg-opacity-75 p-5 rounded">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                        <p class="mt-3 text-light">Scanning Input...</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN MOVED -->
+
+        </div>
+    </div>
+
+    <!-- =====================================================
+     PROJECT INFO MODAL
+===================================================== -->
+    <div class="project-modal-overlay d-none" id="projectModalOverlay"></div>
+    <div class="project-modal d-none" id="projectModal">
+        <div class="project-modal-header">
+            <h4 class="project-modal-title">System Information</h4>
+            <button class="project-modal-close" id="projectModalClose"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="p-4">
+            <p class="text-light">Advanced urban monitoring system using YOLOv8m.</p>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge bg-secondary">Python 3.12</span>
+                <span class="badge bg-secondary">Flask</span>
+                <span class="badge bg-secondary">YOLOv8</span>
+                <span class="badge bg-secondary">OpenCV</span>
+                <span class="badge bg-secondary">SQLite</span>
+            </div>
+            <a href="https://github.com/Shree-2516/AI-Smart-City" target="_blank" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-github me-2"></i>View Source
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <!-- Footer -->
+    <footer class="custom-footer text-center mt-3 py-3">
+        <div class="container d-flex justify-content-center align-items-center gap-3">
+            <a href="https://www.linkedin.com/in/shreeyash-paraj/" target="_blank" class="text-white-50 hover-white">
+                <i class="bi bi-linkedin fs-6"></i>
+            </a>
+            <a href="mailto:shreeyash2573@gmail.com" class="text-white-50 hover-white">
+                <i class="bi bi-envelope fs-6"></i>
+            </a>
+            <small class="text-white-50 border-start border-secondary ps-3 ms-2">
+                &copy; 2026 All rights reserved Smart City.
+            </small>
+        </div>
+    </footer>
+
+    <script src="/static/script.js"></script>
+    <script src="/static/lib/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Count Animation -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".count").forEach(counter => {
+                const target = +counter.dataset.target;
+                const duration = 1200;
+                const start = performance.now();
+                function update(now) {
+                    const progress = Math.min((now - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    counter.textContent = Math.floor(eased * target);
+                    if (progress < 1) requestAnimationFrame(update);
+                    else counter.textContent = target;
+                }
+                requestAnimationFrame(update);
+            });
+        });
+    </script>
+
+</body>
+
+</html>

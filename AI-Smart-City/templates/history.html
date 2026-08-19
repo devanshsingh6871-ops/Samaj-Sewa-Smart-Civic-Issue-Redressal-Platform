@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Report History</title>
+
+    <!-- ===============================
+         CORE STYLES
+    ================================ -->
+
+    <!-- Bootstrap -->
+    <link href="/static/lib/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="/static/lib/css/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Main App Theme -->
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- History Page Specific Theme -->
+    <link rel="stylesheet" href="/static/history.css">
+
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+
+
+    <!-- ===============================
+         LIBRARIES
+    ================================ -->
+
+    <!-- Chart.js -->
+    <script src="/static/lib/js/chart.umd.min.js"></script>
+
+    <!-- Leaflet (Maps + Heatmap) -->
+    <link rel="stylesheet" href="/static/lib/css/leaflet.css" />
+    <script src="/static/lib/js/leaflet.js"></script>
+    <script src="/static/lib/js/leaflet-heat.js"></script>
+</head>
+
+<body>
+
+    <!-- =====================================================
+     NAVBAR
+===================================================== -->
+    <nav class="navbar navbar-dark custom-navbar">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+            <span class="navbar-brand navbar-title">
+                Smart City - Report History
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/citizen" class="btn btn-outline-warning btn-sm fw-semibold">
+                    <i class="bi bi-people-fill me-1"></i> Citizen Portal (Samaj Sewa)
+                </a>
+                <a href="/" class="btn btn-outline-light btn-sm">
+                    &larr; Back to Command Center
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid dashboard-container history-wrapper px-4">
+
+        <!-- =====================================================
+         SUMMARY CARDS (COUNT ANIMATION)
+    ====================================================== -->
+        <div class="history-section">
+            <h4 class="mb-4 fw-semibold text-light">Overall Report Summary</h4>
+
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <i class="bi bi-file-earmark-text fs-4 text-primary"></i>
+                        <h6>Total Reports</h6>
+                        <h4 class="count" data-target="{{ stats.total_reports }}">0</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <i class="bi bi-trash fs-4 text-danger"></i>
+                        <h6>Total Garbage</h6>
+                        <h4 class="count" data-target="{{ stats.total_garbage }}">0</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <i class="bi bi-cone-striped fs-4 text-primary"></i>
+                        <h6>Total Potholes</h6>
+                        <h4 class="count" data-target="{{ stats.total_pothole }}">0</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <i class="bi bi-check-circle fs-4 text-success"></i>
+                        <h6>No Issue Reports</h6>
+                        <h4 class="count" data-target="{{ stats.no_issue_reports }}">0</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+         ISSUE DISTRIBUTION (PIE CHART)
+    ====================================================== -->
+        <div class="history-section text-center">
+            <h4 class="mb-3 fw-semibold text-light">Issue Distribution</h4>
+            <div class="chart-box">
+                <canvas id="summaryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- =====================================================
+         HEATMAP
+    ====================================================== -->
+        <div class="container">
+            <div class="history-section">
+                <h4 class="mb-3 fw-semibold text-light">
+                    Severity-Weighted Issue Heatmap
+                </h4>
+                <div id="heatmap" style="height:420px;border-radius:12px;"></div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+         FILTERS & SEARCH
+    ====================================================== -->
+        <h4 class="mb-4 fw-semibold text-light">
+            Detailed Report Log
+            <span class="fs-6 text-white-50 ms-2">
+                (<span id="filteredCount">0</span> records found)
+            </span>
+        </h4>
+
+        <div class="filters-bar">
+            <!-- Row 1: Search -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-12">
+                    <div class="search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="searchInput" class="form-control custom-search"
+                            placeholder="Search report summary...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Filters -->
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">From Date</label>
+                    <input type="date" id="dateFrom" class="form-control filter-input">
+                </div>
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">To Date</label>
+                    <input type="date" id="dateTo" class="form-control filter-input">
+                </div>
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">Department</label>
+                    <select id="filterDepartment" class="form-select filter-select">
+                        <option value="all">All</option>
+                        <option value="Roads Department">Roads Dept</option>
+                        <option value="Department of Environment">Environment</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">Severity</label>
+                    <select id="filterSeverity" class="form-select filter-select">
+                        <option value="all">All</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">Type</label>
+                    <select id="filterType" class="form-select filter-select">
+                        <option value="all">All</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="text-white small mb-1">Actions</label>
+                    <form action="/delete_all" method="POST"
+                        onsubmit="return confirm('WARNING: This will delete ALL reports and cannot be undone. Proceed?');">
+                        <button class="btn btn-outline-danger w-100">
+                            <i class="bi bi-trash3 me-1"></i> Reset
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if reports %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="reportsTable">
+                <thead>
+                    <tr>
+                        <th>Evidence</th>
+                        <th>Department</th>
+                        <th>Severity</th>
+                        <th>Issues Detected</th>
+                        <th>Date & Time</th>
+                        <th>Location</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr data-department="{{ r.department }}" data-severity="{{ r.severity }}" data-type="{{ r.type }}"
+                        data-date="{{ r.created_at }}">
+                        <td>
+                            <img src="/{{ r.image_path }}" class="img-thumbnail-custom"
+                                onclick="showImageModal('/{{ r.image_path }}')" alt="Evidence">
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill
+                                {% if 'Roads' in r.department %}bg-warning text-dark
+                                {% elif 'Environment' in r.department %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ r.department }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="severity {{ r.severity|lower }}">{{ r.severity }}</span>
+                        </td>
+                        <td class="report-summary">
+                            {% if r.summary %}
+                            {% for k, v in r.summary.items() %}
+                            <div><span class="fw-bold">{{ v }}</span> {{ k }}</div>
+                            {% endfor %}
+                            {% else %}
+                            <span class="text-muted"><i class="bi bi-check-circle me-1"></i>No issues</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap small text-muted">{{ r.created_at }}</td>
+                        <td>
+                            {% if r.latitude %}
+                            <a href="https://www.google.com/maps?q={{ r.latitude }},{{ r.longitude }}" target="_blank"
+                                class="btn btn-sm btn-outline-info border-0">
+                                <i class="bi bi-geo-alt-fill"></i> View
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form action="/delete-report/{{ r.id }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Delete"
+                                    onclick="return confirm('Delete this report?');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center p-5">
+            <i class="bi bi-inbox fs-1 text-muted opacity-25"></i>
+            <p class="text-muted mt-3">No reports found in history.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- =====================================================
+         SAMAJ SEWA CITIZEN COMPLAINTS SECTION
+    ====================================================== -->
+    <div class="history-section mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h4 class="fw-semibold text-light mb-1">
+                    <i class="bi bi-people-fill text-warning me-2"></i>Samaj Sewa - Citizen Grievance Registry
+                </h4>
+                <div class="text-muted small">Public complaints logged via citizen portal with AI triage & status management</div>
+            </div>
+            <a href="/citizen" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-plus-circle me-1"></i> Open Citizen Portal
+            </a>
+        </div>
+
+        {% if citizen_complaints %}
+        <div class="table-responsive">
+            <table class="table custom-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Tracking ID</th>
+                        <th>Evidence</th>
+                        <th>Citizen ID / Contact</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Department</th>
+                        <th>AI Severity</th>
+                        <th>Status</th>
+                        <th>Logged At</th>
+                        <th class="text-end">Update Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in citizen_complaints %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary border border-primary font-monospace">{{ c.complaint_id }}</span>
+                        </td>
+                        <td>
+                            {% if c.image_path %}
+                            <img src="/{{ c.image_path }}" class="img-thumbnail-custom" onclick="showImageModal('/{{ c.image_path }}')" alt="Evidence">
+                            {% else %}
+                            <span class="text-muted small">No Media</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-white">{{ c.user_id }}</div>
+                            <small class="text-muted">{{ c.contact_name }} ({{ c.contact_phone }})</small>
+                        </td>
+                        <td>
+                            <span class="small text-info">{{ c.category }}</span>
+                        </td>
+                        <td style="max-width: 200px;">
+                            <div class="text-truncate text-white-50 small" title="{{ c.description }}">{{ c.description }}</div>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill bg-secondary">{{ c.department }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if 'high' in (c.ai_severity|lower) %}bg-danger{% elif 'medium' in (c.ai_severity|lower) %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ c.ai_severity }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if c.status == 'Resolved' %}bg-success{% elif c.status == 'In Progress' %}bg-info text-dark{% elif c.status == 'Under Review' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ c.status }}
+                            </span>
+                        </td>
+                        <td class="text-nowrap small text-muted">{{ c.created_at }}</td>
+                        <td class="text-end">
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto; display: inline-block;" onchange="updateComplaintStatus('{{ c.complaint_id }}', this.value)">
+                                <option value="Submitted" {% if c.status == 'Submitted' %}selected{% endif %}>Submitted</option>
+                                <option value="Under Review" {% if c.status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                                <option value="In Progress" {% if c.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                <option value="Resolved" {% if c.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                            </select>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center p-4">
+            <i class="bi bi-inbox fs-2 text-muted opacity-25"></i>
+            <p class="text-muted mt-2 small">No citizen complaints logged yet. Submit one from the Citizen Portal!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content modal-content-glass">
+                <div class="modal-header">
+                    <h5 class="modal-title">Evidence Preview</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-0 bg-black">
+                    <img id="modalImageDisplay" src="" class="modal-img-full">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================
+     DATA BOOTSTRAP (FROM FLASK)
+===================================================== -->
+    <script id="stats-data" type="application/json">
+        {{ stats | tojson | safe }}
+    </script>
+    <script id="heatmap-data" type="application/json">
+        {{ heatmap_points | tojson | safe }}
+    </script>
+    <script>
+        const summary = JSON.parse(document.getElementById('stats-data').textContent);
+        const heatmapData = JSON.parse(document.getElementById('heatmap-data').textContent);
+    </script>
+
+    <!-- =====================================================
+     PIE CHART CONFIG
+===================================================== -->
+    <script>
+        new Chart(document.getElementById("summaryChart"), {
+            type: "pie",
+            data: {
+                labels: ["Garbage", "Pothole", "No Issue"],
+                datasets: [{
+                    data: [
+                        summary.total_garbage,
+                        summary.total_pothole,
+                        summary.no_issue_reports
+                    ],
+                    backgroundColor: ["#dc3545", "#0d6efd", "#198754"],
+                    borderColor: "#ffffff",
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: "top",
+                        labels: {
+                            color: "#eaf2ff",
+                            font: { size: 14, weight: "600" },
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- =====================================================
+     HEATMAP INIT
+===================================================== -->
+    <script>
+        if (heatmapData.length) {
+            const heatmap = L.map("heatmap")
+                .setView([heatmapData[0][0], heatmapData[0][1]], 13);
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+                .addTo(heatmap);
+
+            L.heatLayer(heatmapData, {
+                radius: 35,
+                blur: 25,
+                maxZoom: 16
+            }).addTo(heatmap);
+        }
+    </script>
+
+    <!-- =====================================================
+     FILTERS & MODAL LOGIC
+===================================================== -->
+    <script>
+        // Image Modal
+        let imageModalInstance;
+
+        function showImageModal(src) {
+            const modalEl = document.getElementById('imageModal');
+            if (!imageModalInstance) {
+                imageModalInstance = new bootstrap.Modal(modalEl);
+                modalEl.addEventListener('hide.bs.modal', () => {
+                    if (document.activeElement instanceof HTMLElement) {
+                        document.activeElement.blur();
+                    }
+                });
+            }
+            document.getElementById('modalImageDisplay').src = src;
+            imageModalInstance.show();
+        }
+
+        // Filtering Logic
+        document.addEventListener("DOMContentLoaded", () => {
+            const searchInput = document.getElementById('searchInput');
+            const filterDept = document.getElementById('filterDepartment');
+            const filterSev = document.getElementById('filterSeverity');
+            const filterType = document.getElementById('filterType');
+            const dateFromIn = document.getElementById('dateFrom');
+            const dateToIn = document.getElementById('dateTo');
+            const tableRows = document.querySelectorAll('#reportsTable tbody tr');
+
+            function filterTable() {
+                const term = searchInput ? searchInput.value.toLowerCase() : "";
+                const dept = filterDept ? filterDept.value : "all";
+                const sev = filterSev ? filterSev.value : "all";
+                const type = filterType ? filterType.value : "all";
+
+                const dFrom = dateFromIn.value ? new Date(dateFromIn.value) : null;
+                // Set to start of day
+                if (dFrom) dFrom.setHours(0, 0, 0, 0);
+
+                const dTo = dateToIn.value ? new Date(dateToIn.value) : null;
+                // Set to end of day
+                if (dTo) dTo.setHours(23, 59, 59, 999);
+
+                let visibleCount = 0;
+
+                tableRows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    const rowDept = row.dataset.department || "";
+                    const rowSev = row.dataset.severity || "";
+                    const rowType = row.dataset.type || "";
+                    const rowDateStr = row.dataset.date || "";
+                    const rowDate = rowDateStr ? new Date(rowDateStr) : null;
+
+                    let match = true;
+
+                    // Search match
+                    if (term && !text.includes(term)) match = false;
+
+                    // Dropdown matches
+                    // Convert both to lower case for case-insensitive comparison
+                    const filterDeptVal = dept.toLowerCase().trim();
+                    const rowDeptVal = rowDept.toLowerCase().trim();
+
+                    if (dept !== 'all' && !rowDeptVal.includes(filterDeptVal)) match = false;
+                    if (sev !== 'all' && rowSev !== sev) match = false;
+                    if (type !== 'all' && rowType !== type) match = false;
+
+                    // Date Range match
+                    if (rowDate) {
+                        if (dFrom && rowDate < dFrom) match = false;
+                        if (dTo && rowDate > dTo) match = false;
+                    }
+
+                    if (match) visibleCount++;
+                    row.style.display = match ? '' : 'none';
+                });
+
+                // Update count
+                document.getElementById('filteredCount').innerText = visibleCount;
+            }
+
+            // Initial count
+            filterTable();
+
+            // Attach listeners
+            if (searchInput) searchInput.addEventListener('keyup', filterTable);
+            if (filterDept) filterDept.addEventListener('change', filterTable);
+            if (filterSev) filterSev.addEventListener('change', filterTable);
+            if (filterType) filterType.addEventListener('change', filterTable);
+            if (dateFromIn) dateFromIn.addEventListener('change', filterTable);
+            if (dateToIn) dateToIn.addEventListener('change', filterTable);
+        });
+
+        async function updateComplaintStatus(complaintId, status) {
+            try {
+                const res = await fetch('/api/citizen/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ complaint_id: complaintId, status: status })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Complaint ${complaintId} status updated to: ${status}`);
+                    window.location.reload();
+                } else {
+                    alert('Status update failed: ' + (data.error || 'Server error'));
+                }
+            } catch (err) {
+                alert('Network error updating status.');
+            }
+        }
+    </script>
+
+    <!-- =====================================================
+     COUNT-UP ANIMATION
+===================================================== -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".count").forEach(counter => {
+                const target = +counter.dataset.target;
+                const duration = 900;
+                const start = performance.now();
+
+                function update(now) {
+                    const progress = Math.min((now - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    counter.textContent = Math.floor(eased * target);
+
+                    if (progress < 1) requestAnimationFrame(update);
+                    else counter.textContent = target;
+                }
+
+                requestAnimationFrame(update);
+            });
+        });
+    </script>
+
+    <!-- Footer -->
+    <!-- Footer -->
+    <footer class="custom-footer text-center mt-3 py-3">
+        <div class="container d-flex justify-content-center align-items-center gap-3">
+            <a href="https://www.linkedin.com/in/shreeyash-paraj/" target="_blank" class="text-white-50 hover-white">
+                <i class="bi bi-linkedin fs-6"></i>
+            </a>
+            <a href="mailto:shreeyash2573@gmail.com" class="text-white-50 hover-white">
+                <i class="bi bi-envelope fs-6"></i>
+            </a>
+            <small class="text-white-50 border-start border-secondary ps-3 ms-2">
+                &copy; 2026 All rights reserved Smart City.
+            </small>
+        </div>
+    </footer>
+
+    <script src="/static/lib/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

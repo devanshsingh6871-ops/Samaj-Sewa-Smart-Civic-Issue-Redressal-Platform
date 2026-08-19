@@ -1,0 +1,291 @@
+/* ==========================================================================
+   Command Center Theme - Smart City Issue Detector
+   ========================================================================== */
+
+:root {
+    --bg-dark: #0a0a12;
+    --panel-bg: rgba(20, 20, 30, 0.6);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --primary-glow: rgba(13, 110, 253, 0.5);
+    --secondary-glow: rgba(13, 202, 240, 0.4);
+    --accent-glow: rgba(255, 193, 7, 0.4);
+    --text-main: #e0e0e0;
+    --text-muted: #8c8c9a;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    background-image:
+        radial-gradient(circle at 15% 50%, rgba(13, 110, 253, 0.08), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(220, 53, 69, 0.08), transparent 25%);
+    overflow-x: hidden;
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+/* Glassmorphism Panel */
+.glass-panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.panel-title {
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 15px;
+}
+
+/* Navbar */
+.custom-navbar {
+    background: rgba(10, 10, 18, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 0.8rem 0;
+}
+
+.navbar-title {
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 1.2rem;
+}
+
+/* ==========================================================================
+   Input Section
+   ========================================================================== */
+
+.custom-pills .nav-link {
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.custom-pills .nav-link.active {
+    background-color: rgba(13, 110, 253, 0.2);
+    color: #fff;
+    border: 1px solid rgba(13, 110, 253, 0.4);
+}
+
+.upload-area {
+    border: 2px dashed var(--panel-border);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.upload-area:hover {
+    border-color: rgba(13, 110, 253, 0.5);
+    background: rgba(13, 110, 253, 0.05);
+}
+
+/* Buttons */
+.glow-primary {
+    box-shadow: 0 0 15px rgba(13, 110, 253, 0.3);
+    transition: box-shadow 0.3s;
+}
+
+.glow-primary:hover {
+    box-shadow: 0 0 25px rgba(13, 110, 253, 0.6);
+}
+
+.glow-secondary {
+    box-shadow: 0 0 15px rgba(13, 202, 240, 0.2);
+}
+
+.glow-warning {
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.2);
+    color: #fff;
+}
+
+.glow-danger {
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.2);
+}
+
+/* ==========================================================================
+   Stats Cards
+   ========================================================================== */
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Project Info Modal
+   ========================================================================== */
+
+.project-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 1040;
+}
+
+.project-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    background: #1a1a24;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    z-index: 1050;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.project-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project-modal-title {
+    margin: 0;
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+.project-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.project-modal-close:hover {
+    color: #fff;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    height: calc(100vh - 140px);
+    /* Navbar (70px) + Footer (70px) */
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    /* padding-bottom removed as height handles the spacing */
+}
+
+/* Animations */
+@keyframes pulse-border {
+    0% {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    50% {
+        border-color: rgba(13, 110, 253, 0.5);
+    }
+
+    100% {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.active-monitoring {
+    animation: pulse-border 2s infinite;
+}
+
+/* ==========================================================================
+   Severity Badges
+   ========================================================================== */
+
+.severity {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.severity.low {
+    background-color: rgba(25, 135, 84, 0.2);
+    color: #198754;
+    /* Bootstrap success */
+    border: 1px solid rgba(25, 135, 84, 0.4);
+}
+
+.severity.medium {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    /* Bootstrap warning */
+    border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
+.severity.high {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+    /* Bootstrap danger */
+    border: 1px solid rgba(220, 53, 69, 0.4);
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.custom-footer {
+    background: rgba(10, 10, 18, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--panel-border);
+    padding: 1rem 0;
+    /* Reduced padding */
+    margin-top: auto;
+    color: var(--text-muted);
+
+    /* Fixed position to stay at bottom */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.custom-footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.custom-footer a:hover {
+    color: #fff;
+    text-decoration: none;
+}

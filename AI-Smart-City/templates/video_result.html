@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Video Analysis Result</title>
+    <!-- Bootstrap -->
+    <!-- Bootstrap -->
+    <link href="/static/lib/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="/static/lib/css/bootstrap-icons.css" rel="stylesheet">
+    <!-- App Theme -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <style>
+        .key-frame-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .key-frame-img:hover {
+            transform: scale(1.05);
+        }
+
+        .summary-box {
+            background: rgba(25, 25, 35, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark custom-navbar">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="navbar-brand navbar-title">
+                Video Analysis Report
+            </span>
+            <a href="/" class="btn btn-outline-light btn-sm">
+                &larr; Back to Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+
+        <!-- Overall Status -->
+        <div class="row mb-4">
+            <div class="col-md-12 text-center">
+                <h2 class="text-light mb-3">Analysis Complete</h2>
+                <span class="badge rounded-pill fs-5 
+                {% if severity == 'Low' %}bg-success
+                {% elif severity == 'Medium' %}bg-warning text-dark
+                {% else %}bg-danger{% endif %}">
+                    Overall Severity: {{ severity }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="row text-center text-light">
+            <div class="col-md-4">
+                <div class="summary-box">
+                    <i class="bi bi-camera-reels fs-2 text-info"></i>
+                    <h3 class="mt-2">{{ key_frames|length }}</h3>
+                    <p class="text-white-50">Key Frames Captured</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-box">
+                    <i class="bi bi-trash fs-2 text-danger"></i>
+                    <h3 class="mt-2">{{ summary.get('garbage', 0) }}</h3>
+                    <p class="text-white-50">Garbage Detections (Cumulative)</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-box">
+                    <i class="bi bi-cone-striped fs-2 text-warning"></i>
+                    <h3 class="mt-2">{{ summary.get('pothole', 0) }}</h3>
+                    <p class="text-white-50">Pothole Detections (Cumulative)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Frames Gallery -->
+        <h4 class="text-light mb-3 mt-4">Key Detections</h4>
+        <div class="row">
+            {% for frame in key_frames %}
+            <div class="col-md-3 mb-4">
+                <div class="card bg-dark border-secondary h-100">
+                    <img src="/{{ frame }}" class="key-frame-img" alt="Detected Frame" onclick="openModal(this.src)">
+                    <div class="card-footer text-center">
+                        <small class="text-light">Frame #{{ loop.index }}</small>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center text-white-50">
+                <p>No issues detected in this video.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if report_id %}
+        <div class="text-center mt-4 mb-5">
+            <p class="text-light">This analysis has been saved to history (Report #{{ report_id }}).</p>
+            <a href="/history" class="btn btn-primary">View in History</a>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-body p-0 text-center position-relative">
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                        data-bs-dismiss="modal"></button>
+                    <img id="modalImage" src="" class="img-fluid rounded shadow-lg" style="max-height: 90vh;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="custom-footer text-center mt-5">
+        <div class="container">
+            <div class="mb-2">
+                <a href="https://www.linkedin.com/in/shreeyash-paraj/" target="_blank" class="me-3"><i
+                        class="bi bi-linkedin fs-5"></i></a>
+                <a href="mailto:shreeyash2573@gmail.com" class="me-3"><i class="bi bi-envelope fs-5"></i></a>
+            </div>
+            <small>&copy; 2026 All rights reserved Shreeyash Paraj.</small>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openModal(src) {
+            document.getElementById('modalImage').src = src;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+    </script>
+
+</body>
+
+</html>

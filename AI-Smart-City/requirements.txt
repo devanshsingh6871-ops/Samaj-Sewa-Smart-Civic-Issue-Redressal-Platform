@@ -1,0 +1,6 @@
+ultralytics
+gradio
+pillow
+flask
+pandas
+opencv-python

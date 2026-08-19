@@ -1,0 +1,149 @@
+/* ==========================================================================
+   History Page Enhancements
+   ========================================================================== */
+
+/* Enhanced Table Container */
+.table-responsive {
+    border-radius: 12px;
+    overflow-x: auto;
+    /* Allow horizontal scroll if needed */
+    margin-top: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.table {
+    margin-bottom: 0;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.table thead th {
+    background: rgba(13, 110, 253, 0.15);
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.table tbody td {
+    padding: 1rem;
+    border: none;
+    vertical-align: middle;
+}
+
+/* Image Thumbnail */
+.img-thumbnail-custom {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.img-thumbnail-custom:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-glow);
+}
+
+/* Filters Bar */
+.filters-bar {
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper .bi-search {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.custom-search {
+    padding-left: 2.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 8px;
+}
+
+.custom-search:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-glow);
+    color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.filter-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary-glow);
+    color: #fff;
+}
+
+.filter-select option {
+    background: #1a1a24;
+    color: #fff;
+}
+
+/* Modal Image */
+.modal-img-full {
+    max-height: 85vh;
+    object-fit: contain;
+    width: 100%;
+    border-radius: 8px;
+}
+
+.modal-content-glass {
+    background: rgba(15, 15, 25, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Chart Box */
+.chart-box {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    /* Subtle glass background */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
